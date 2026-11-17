@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Value Iteration — An Exploration into Optimal Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="note.css">
+<script>window.MathJax = { tex: { tags: "none" }, chtml: { scale: 1.02 } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+</head>
+<body>
+<div class="mast"><a href="../index.html#r-notebook">← Vol. I · Notebook</a><span>N.02 · Series · Part I</span></div>
+<nav class="toc" id="toc"><div class="cap" style="margin-bottom:.5rem;color:var(--acc)">On this page</div>
+  <a href="#s1">1 How this works</a><a href="#s2">2 Grid World!</a><a href="#series">→ The series</a></nav>
+<main class="page">
+  <header>
+    <div class="cap">Notebook · N.02 · An Exploration into Optimal Control</div>
+    <h1 style="margin-top:.8rem">Part I: Value Iteration</h1>
+    <p class="dek">Discretising a pendulum's state space and iterating toward an optimal control policy.</p>
+    <div class="meta"><span class="mono">◦ Python · NumPy</span><span class="mono">◦ Underactuated Robotics (Tedrake)</span><span class="mono">◦ double integrator · simple pendulum</span></div>
+  </header>
+
+  <div class="sn-wrap"><p>I've dove into Russ Tedrake's Underactuated Robotics Course and it has been an incredibly eye-opening journey thus far. This series of posts and casual articles are to take the major concepts from this course and document how I've come to use this, and other tools, to gain a better understanding of Optimal Control Theory. This will be done through python scripts and some experiments I've been able to develop.<sup>1</sup></p>
+    <aside class="sn"><b>1.</b> <i>Disclaimer:</i> This is not a way to learn this subject, it is simply a way for me to portray how my understanding of this field is changing in a digestible form.</aside></div>
+
+  <p>In this post, we will be looking at the Value Iteration algorithm and, specifically, how it gets implemented on the Double Integrator and Single Pendulum systems. All the code can be found here.<!-- TODO: link the code repository --></p>
+
+  <h2 id="s1"><span class="n">1</span>Let's try to understand how this works first</h2>
+  <div class="sn-wrap">
+    <p>Let's say we are given a system of equations that govern our dynamical system and we want to develop the “optimal control policy” for this system. For a simple pendulum (shown on the right, top), this is simply:</p>
+    <aside class="sn figs">
+      <figure class="mfig"><img src="../assets/notes/optimal-control/pendulum.webp" alt="Simple pendulum of length L and mass M, displaced by angle theta">
+        <figcaption>The simple pendulum. © Encyclopædia Britannica</figcaption></figure>
+      <figure class="mfig"><img src="../assets/notes/optimal-control/tedrake-cost-to-go-policy.png" alt="Cost-to-Go and Policy plots over q and qdot">
+        <figcaption>Cost-to-Go and optimal policy, from Russ Tedrake's <i>Underactuated Robotics</i>.</figcaption></figure>
+    </aside>
+  </div>
+
+  <div class="math">
+    \begin{align}
+    ml^2\ddot{\theta} + b\dot{\theta} + mgl\sin(\theta) = u(t)
+    \end{align}
+    \begin{align}
+    \dot{x}_1 &= x_2 \\
+    \dot{x}_2 &= -\frac{g}{l}\sin(x_1) - \frac{b}{ml^2}x_2 + \frac{1}{ml^2}u(t)
+    \end{align}
+    \begin{align}
+    ml^2\ddot{\theta} + b\dot{\theta} + mgl\theta = u(t)
+    \end{align}
+    \begin{align}
+    \begin{bmatrix} \dot{x}_1 \\ \dot{x}_2 \end{bmatrix} =
+    \begin{bmatrix} 0 & 1 \\ -\frac{g}{l} & -\frac{b}{ml^2} \end{bmatrix}
+    \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} +
+    \begin{bmatrix} 0 \\ \frac{1}{ml^2} \end{bmatrix} u(t)
+    \end{align}
+  </div>
+  <p class="mono" style="margin-top:-.6rem">Nonlinear model · state-space form · linearised model · linearised state-space model</p>
+
+  <p>With this set up, Value Iteration allows us to discretize our state space (in this case theta and theta_dot), and potential control inputs. For each of these cells or buckets, we can calculate a cost function and, more importantly, the control input that produces the smallest cost value for that cell. This cost function is defined by the cell you are calculating for and the cell the controller will take you to next, governed by the dynamics above. By iterating through all cells and performing this iteration multiple times, we can converge to the optimal control policy, for which we reduce the cost function we are interested in. The bottom two images are the Cost-to-Go and Optimal Control plots that Russ provides, let's see if we can do that ourselves!</p>
+
+  <h2 id="s2"><span class="n">2</span>Grid World!</h2>
+  <p>We have to first begin by creating a grid world of some kind. These are the buckets of our state-space. Once again that is, for the Simple Pendulum, the angle of the pendulum and it's angular velocity. So let's code that up and try to visualize what it looks like:</p>
+
+  <div class="code wide" data-name="state & control discretization" data-lang="python"><pre><code># State and control discretization
+X1_RANGE_MIN, X1_RANGE_MAX = 0, 2*np.pi
+X2_RANGE_MIN, X2_RANGE_MAX = -10, 10
+
+X1_NUM_BINS, X2_NUM_BINS = 151, 151
+X1_BINS = np.linspace(X1_RANGE_MIN, X1_RANGE_MAX, num=X1_NUM_BINS)
+X2_BINS = np.linspace(X2_RANGE_MIN, X2_RANGE_MAX, num=X2_NUM_BINS)</code></pre></div>
+
+  <div class="sn-wrap">
+    <p>Alright, on the right we have the desired grid world, it is 151x151. Alongside discretizing the state space, we also have to discretize our potential controller inputs. In this case, we are directly driving the torque and it can be anywhere between -3 and 3 kg-m, and we will have 21 buckets.</p>
+    <aside class="sn figs">
+      <figure class="mfig"><img src="../assets/notes/optimal-control/grid-world.png" alt="Empty 151 by 151 grid world over x1 from 0 to 2 pi and x2 from -10 to 10">
+        <figcaption>The empty 151×151 grid world, 21 control bins. Click to enlarge.</figcaption></figure>
+    </aside>
+  </div>
+
+  <p>For each of these cells we have to calculate a value function. This value function is defined as:</p>
+
+  <figure class="wide zoomable"><img src="../assets/notes/optimal-control/value-iteration.gif" alt="Animation of the value function and optimal control converging over value iterations">
+    <figcaption class="mono"><span>Value function (left) and optimal control (right), iteration by iteration.</span></figcaption></figure>
+
+  <section class="series" id="series">
+    <div class="cap">An Exploration into Optimal Control</div>
+    <ol>
+      <li class="cur"><span>Part I: Value Iteration</span><span class="mono">you are here</span></li>
+      <li><span style="color:var(--ink-3)">Part II: Quanser Pendulum</span><span class="mono">in progress</span></li>
+    </ol>
+  </section>
+
+  <div class="next mono"><a href="../index.html#r-notebook">← All notebook entries</a><a href="frontier-exploration.html">Previous: Frontier-Based Exploration →</a></div>
+</main>
+<script src="note.js"></script>
+</body>
+</html>

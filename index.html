@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kashish Garg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3efe6; --paper-2:#ebe5d8; --ink:#1d1b17; --ink-2:#5a554b; --ink-3:#8c8576; --rule:#d6cfbf;
+  --brown:#8b4513; --teal:#113d3d; --acc:var(--brown);
+  --serif:"Newsreader",Georgia,serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --col:36rem; --margin:15rem;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16150f; --paper-2:#1e1c16; --ink:#ebe5d6; --ink-2:#b0a894; --ink-3:#7a7362; --rule:#2f2c23; --brown:#c98a55; --teal:#2f7471;}}
+:root[data-theme="dark"]{--paper:#16150f; --paper-2:#1e1c16; --ink:#ebe5d6; --ink-2:#b0a894; --ink-3:#7a7362; --rule:#2f2c23; --brown:#c98a55; --teal:#2f7471;}
+body[data-vol="wildlife"]{--acc:var(--teal)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:1.18rem;line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .25 0 0 0 .12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:inherit;text-decoration-color:var(--acc);text-underline-offset:.18em;text-decoration-thickness:1px}
+a:hover{color:var(--acc)}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-size:.72rem;letter-spacing:.02em;color:var(--ink-3)}
+.cap{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3)}
+
+/* masthead + volume switch */
+.mast{position:sticky;top:0;z-index:10;background:var(--paper);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:.9rem 2rem;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
+.mast .r{justify-self:end;display:flex;gap:1.2rem;align-items:center}
+.mast a{text-decoration:none}
+.vols{display:flex;border:1px solid var(--rule);border-radius:2px}
+.vols button{background:none;border:0;cursor:pointer;padding:.45rem 1.1rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--ink-3);display:flex;gap:.55rem;align-items:baseline}
+.vols button+button{border-left:1px solid var(--rule)}
+.vols button i{font-family:var(--serif);font-style:italic;font-size:.95rem;letter-spacing:0}
+.vols button.on[data-v="robotics"]{background:var(--brown);color:var(--paper)}
+.vols button.on[data-v="wildlife"]{background:var(--teal);color:var(--paper)}
+.socials{position:relative}
+.socials summary{list-style:none;cursor:pointer;user-select:none}
+.socials summary::-webkit-details-marker{display:none}
+.socials summary i{font-style:normal;display:inline-block;transition:transform .2s}
+.socials[open] summary i{transform:rotate(180deg)}
+.socials summary:hover,.socials[open] summary{color:var(--acc)}
+.socials .menu{position:absolute;right:0;top:calc(100% + .7rem);min-width:10.5rem;background:var(--paper);border:1px solid var(--ink);box-shadow:3px 3px 0 var(--acc);padding:.3rem 0;z-index:20;animation:drop .16s ease-out}
+.socials .menu a{display:flex;justify-content:space-between;gap:1rem;padding:.45rem .9rem;color:var(--ink-2)}
+.socials .menu a span{color:var(--acc)}
+.sociaeightenu a:hover{background:var(--paper-2);color:var(--ink)}
+@keyframes drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.theme{background:none;border:1px solid var(--rule);color:var(--ink-2);padding:.15rem .5rem;border-radius:99px;cursor:pointer}
+
+/* page: each volume is its own grid.
+   Vol. II (wildlife) is left-anchored:  [ · | column | margin | · ]
+   Vol. I (robotics) mirrors it:         [ · | margin | column | · ]
+   On ultra-wide screens the two sit side by side as a spread (see the min-width:2400px block). */
+.page{position:relative;z-index:1}
+.vol{display:grid;column-gap:3rem;padding:0 2rem;align-content:start}
+.vol.w{--acc:var(--teal);grid-template-columns:1fr var(--col) var(--margin) 1fr}
+.vol.r{--acc:var(--brown);grid-template-columns:1fr var(--margin) var(--col) 1fr}
+.vol.w>*{grid-column:2}
+.vol.r>*{grid-column:3}
+.vol>.wide{grid-column:2 / 4}
+body[data-vol="robotics"] .vol.w, body[data-vol="wildlife"] .vol.r{display:none}
+.colw{max-width:var(--col)}
+/* mirroring for Vol. I */
+.vol.r .hero{text-align:right}
+.vol.r .hero .dek{margin-left:auto}
+.vol.r .hero .meta{justify-content:flex-end}
+.vol.r h2{flex-direction:row-reverse}
+.vol.r .sn{left:auto;right:calc(100% + 3rem);text-align:right}
+.vol.r .colw{margin-left:auto}
+.vol.r .toggle-more{display:block;margin-left:auto}
+.vol.r .cross{flex-direction:row-reverse}
+.spread-label{display:none}
+
+.toc{position:fixed;top:7.5rem;width:11rem;font-family:var(--mono);font-size:.7rem;line-height:2;color:var(--ink-3);z-index:2}
+.toc-r{--acc:var(--brown);left:2rem}
+.toc-w{--acc:var(--teal);left:2rem}
+body[data-vol="robotics"] .toc-w, body[data-vol="wildlife"] .toc-r{display:none}
+.toc .cap{margin-bottom:.6rem;color:var(--acc)}
+.toc a{text-decoration:none;display:block}
+.toc a.on{color:var(--acc)}
+.toc a.on::before{content:"→ "}
+.toc .alt{margin-top:1.2rem;padding-top:.8rem;border-top:1px solid var(--rule)}
+
+header.hero{padding:5.5rem 0 2.6rem}
+.hero h1{font-weight:300;font-size:clamp(2.6rem,5.6vw,4.4rem);line-height:1.03;letter-spacing:-.02em}
+.hero h1 em{font-style:italic;color:var(--acc)}
+.hero .dek{margin-top:1.4rem;color:var(--ink-2);font-size:1.25rem;font-style:italic;max-width:32rem}
+.hero .meta{margin-top:1.8rem;display:flex;gap:.4rem 2rem;flex-wrap:wrap}
+.vol .hero .dek{max-width:none}
+/* Wildlife emblem: transparent ink drawing; inverted to light ink in dark mode */
+.hero.has-mark{display:grid;grid-template-columns:minmax(0,1fr) 14rem;column-gap:2.5rem;align-items:end}
+.hero.has-mark>*{grid-column:1}
+.hero .mark{grid-column:2;grid-row:1 / span 5;align-self:center;display:flex;flex-direction:column;align-items:center;gap:.4rem;text-decoration:none}
+.hero .mark img{display:block;width:100%;height:auto;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.hero .mark:hover img{transform:translateY(-4px) rotate(-1.5deg)}
+/* Vol. I mirrors it: portrait on the left */
+.vol.r .hero.has-mark{grid-template-columns:14rem minmax(0,1fr)}
+.vol.r .hero.has-mark>*{grid-column:2}
+.vol.r .hero .mark{grid-column:1}
+.vol.r .hero .mark:hover img{transform:translateY(-4px) rotate(1.5deg)}
+/* Hug the portrait so the image→text gap matches Vol. II (right-aligned text left a wide hole) */
+.vol.r .hero.has-mark{text-align:left}
+.vol.r .hero.has-mark .meta{justify-content:flex-start}
+.vol.r .hero.has-mark .dek{margin-left:0}
+.hero .mark .portrait{width:100%;aspect-ratio:560/840;object-fit:cover}
+.hero .mark span{font-family:var(--mono);font-size:.64rem;letter-spacing:.06em;color:var(--ink-3)}
+.hero .mark:hover span{color:var(--acc)}
+/* dark mode swaps in the light-on-black render (black baked out to transparency) */
+.hero .mark .m-dark{display:none}
+:root[data-theme="dark"] .hero .mark .m-light{display:none}
+:root[data-theme="dark"] .hero .mark .m-dark{display:block}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .hero .mark .m-light{display:none}
+  :root:not([data-theme="light"]) .hero .mark .m-dark{display:block}}
+
+section{padding-top:4.5rem}
+h2{font-weight:400;font-size:2rem;letter-spacing:-.01em;margin-bottom:1rem;display:flex;gap:1rem;align-items:baseline}
+h2 .n{font-family:var(--mono);font-size:.8rem;color:var(--acc)}
+h3{font-weight:500;font-size:1.35rem;line-height:1.25}
+.intro{color:var(--ink-2);font-size:1.05rem;max-width:var(--col);margin-bottom:.6rem}
+.lede::first-letter{float:left;font-size:4.2em;line-height:.82;padding:.06em .08em 0 0;font-weight:300;color:var(--acc)}
+.sn-wrap{position:relative}
+.sn-wrap+.sn-wrap{margin-top:1rem}
+.sn{position:absolute;left:calc(100% + 3rem);top:.3rem;width:var(--margin);font-family:var(--mono);font-size:.7rem;line-height:1.55;color:var(--ink-2)}
+.sn b{color:var(--acc);font-weight:500}
+sup.r{font-family:var(--mono);font-size:.62rem;color:var(--acc);margin-left:1px}
+
+/* projects */
+.entry{display:grid;grid-template-columns:var(--col) var(--margin);column-gap:3rem;padding:2.2rem 0;border-top:1px solid var(--rule)}
+.entry .fig{color:var(--ink);background:var(--paper-2);border:1px solid var(--rule);padding:.6rem;aspect-ratio:10/7}
+.entry .fig svg{width:100%;height:100%}
+.entry .sub{font-style:italic;color:var(--ink-2);margin:.15rem 0 .7rem}
+.entry p{font-size:1.06rem}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.8rem}
+.chips span{font-family:var(--mono);font-size:.64rem;border:1px solid var(--rule);padding:.1rem .45rem;border-radius:2px;color:var(--ink-2)}
+.entry .side{display:flex;flex-direction:column;gap:.7rem}
+dl.kv{font-family:var(--mono);font-size:.68rem;display:grid;grid-template-columns:auto 1fr;gap:.2rem .8rem;color:var(--ink-2)}
+dl.kv dt{color:var(--ink-3)}
+.more{display:none}
+.entries.collapsed .entry:nth-child(n+5){display:none}
+.toggle-more{margin-top:1rem;background:none;border:1px solid var(--rule);padding:.4rem .9rem;cursor:pointer;font-family:var(--mono);font-size:.7rem;color:var(--ink-2)}
+.toggle-more:hover{border-color:var(--acc);color:var(--acc)}
+
+
+/* project split view */
+.proj{display:grid;grid-template-columns:minmax(0,1fr) 0fr;column-gap:0;transition:grid-template-columns .45s cubic-bezier(.2,.8,.2,1),column-gap .45s}
+.entry{cursor:pointer;position:relative;transition:padding .3s}
+.entry:hover h3{color:var(--acc)}
+.entry:focus-visible{outline:2px solid var(--acc);outline-offset:4px}
+.has{font-family:var(--mono);font-size:.66rem;color:var(--acc);letter-spacing:.04em}
+.open-hint{font-family:var(--mono);font-size:.64rem;color:var(--ink-3);margin-top:.9rem;opacity:0;transition:opacity .2s}
+.entry:hover .open-hint{opacity:1}
+.viewer{display:none}
+/* expand into the right gutter, never the left one where the fixed TOC sits */
+section.split{grid-column:2 / 5 !important}
+.split .proj{grid-template-columns:21rem minmax(0,1fr);column-gap:3rem}
+.split .entries .entry{display:block!important;grid-template-columns:none;padding:.95rem 0 .95rem 1rem;border-left:2px solid transparent;margin-left:-1rem}
+.split .entry .side,.split .entry p,.split .entry .chips,.split .entry .open-hint{display:none}
+.split .entry h3{font-size:1.08rem}
+.split .entry .sub{font-size:.95rem;margin:.05rem 0 0}
+.split .entry.on{border-left-color:var(--acc);background:linear-gradient(90deg,var(--paper-2),transparent 85%)}
+.split .entry.on h3{color:var(--acc)}
+.split .entry.on p{display:block;font-size:.95rem;margin-top:.6rem;color:var(--ink-2)}
+.split + .toggle-more,.split .toggle-more{display:none}
+.split .viewer{display:block;position:sticky;top:5rem;align-self:start;max-height:calc(100vh - 6rem);overflow:auto;animation:slidein .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes slidein{from{opacity:0;transform:translateX(2rem)}to{opacity:1;transform:none}}
+.v-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding-bottom:.8rem;border-bottom:1px solid var(--ink)}
+.v-head h3{font-size:1.9rem;font-weight:300;letter-spacing:-.01em;margin-top:.2rem}
+.v-x{background:none;border:1px solid var(--rule);cursor:pointer;font-family:var(--mono);font-size:.68rem;color:var(--ink-2);padding:.3rem .7rem;white-space:nowrap}
+.v-x:hover{border-color:var(--acc);color:var(--acc)}
+.v-tabs{display:flex;gap:.3rem;margin:1rem 0 .6rem}
+.v-tabs button{background:none;border:1px solid var(--rule);padding:.25rem .8rem;cursor:pointer;font-family:var(--mono);font-size:.68rem;color:var(--ink-2)}
+.v-tabs button.on{background:var(--acc);border-color:var(--acc);color:var(--paper)}
+.v-frame{margin-top:1rem;background:#0d0c0a;border:1px solid var(--rule);aspect-ratio:16/9;position:relative}
+.v-frame.doc{aspect-ratio:auto;height:min(78vh,62rem);background:var(--paper-2)}
+.v-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.v-poster{position:absolute;inset:0;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.v-poster span{font-family:var(--mono);font-size:.75rem;background:rgba(0,0,0,.75);color:#fff;padding:.6rem 1rem}
+.v-poster:hover span{background:var(--acc)}
+.v-cap{display:flex;justify-content:space-between;gap:1rem;margin-top:.5rem}
+.v-cap a{white-space:nowrap}
+.v-fig{margin-top:1rem;background:var(--paper-2);border:1px solid var(--rule);padding:2rem;color:var(--ink);aspect-ratio:16/10}
+.v-fig svg{width:100%;height:100%}
+.v-empty{font-style:italic;color:var(--ink-3);font-size:1rem;margin-top:.6rem}
+.v-links{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1.2rem}
+.v-links a{font-family:var(--mono);font-size:.7rem;text-decoration:none;border:1px solid var(--ink);padding:.35rem .8rem}
+.v-links a:hover{background:var(--ink);color:var(--paper)}
+.v-meta{margin-top:1.2rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;border-top:1px solid var(--rule);padding-top:.8rem}
+.v-meta .chips{margin-top:.3rem}
+.v-nav{display:flex;justify-content:space-between;margin-top:1.4rem;padding-top:.8rem;border-top:1px solid var(--rule)}
+.v-nav button{background:none;border:0;cursor:pointer;font-family:var(--mono);font-size:.7rem;color:var(--ink-2)}
+.v-nav button:hover{color:var(--acc)}
+/* project figures: photo variant + hover animation */
+.entry .fig{transition:border-color .3s}
+.entry:hover .fig{border-color:var(--acc)}
+.v-photo{margin-top:1.4rem}
+.v-photo img{display:block;width:100%;max-width:34rem;margin:0 auto}
+.fig svg *,.v-fig svg *{transition:stroke .3s,fill .3s,fill-opacity .3s,opacity .3s}
+.fig svg [class*="k-"],.v-fig svg [class*="k-"]{transform-box:view-box}
+.fig svg .k-rotor,.v-fig svg .k-rotor,.fig svg .k-cloud,.v-fig svg .k-cloud{transform-box:fill-box;transform-origin:center}
+.fig svg .k-fly,.v-fig svg .k-fly{transform-origin:0 0;offset-distance:0%}
+.fig svg .ov,.v-fig svg .ov{opacity:0}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .a{stroke:var(--acc)}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .af{fill:var(--acc)}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .ov{opacity:1}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .rays{opacity:1}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-swing{animation:k-swing 1.8s ease-in-out infinite alternate}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-spin{animation:k-spin 6s linear infinite}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-bob{animation:k-bob 1.3s ease-in-out infinite alternate}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-rotor{animation:k-rotor .12s linear infinite alternate}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-march{animation:k-march .9s linear infinite}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-draw{stroke-dasharray:var(--len);animation:k-draw .8s ease-out var(--d,0s) both}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-node{animation:k-node .3s ease var(--d,0s) both}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-pulse{animation:k-pulse .9s ease-in-out var(--d,0s) infinite alternate}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-step{animation:k-step .9s ease-in-out var(--d,0s) infinite alternate}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-curl{animation:k-curl 1.6s ease-in-out var(--d,0s) infinite alternate}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-fly{animation:k-fly 4.5s cubic-bezier(.45,.05,.55,.95) infinite}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-trace{stroke-dasharray:100;animation:k-trace 4.5s cubic-bezier(.45,.05,.55,.95) infinite}
+:is(.entry:hover .fig,.entry:focus-visible .fig,.v-fig) .k-cloud{animation:k-cloud 4.5s ease-out var(--d,0s) infinite both}
+@keyframes k-swing{from{transform:rotate(-11deg)}to{transform:rotate(11deg)}}
+@keyframes k-spin{to{transform:rotate(360deg)}}
+@keyframes k-bob{from{transform:translateY(3px)}to{transform:translateY(-5px)}}
+@keyframes k-rotor{from{transform:scaleX(1)}to{transform:scaleX(.4)}}
+@keyframes k-march{to{stroke-dashoffset:-20}}
+@keyframes k-draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@keyframes k-node{to{fill:var(--acc);fill-opacity:.16}}
+@keyframes k-pulse{from{fill-opacity:.2}to{fill-opacity:.95}}
+@keyframes k-step{from{transform:rotate(-13deg)}to{transform:rotate(13deg)}}
+@keyframes k-fly{0%{offset-distance:0%}48%,100%{offset-distance:100%}}
+@keyframes k-trace{0%{stroke-dashoffset:100;opacity:1}48%,90%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes k-cloud{0%,50%{opacity:0;transform:scale(.4)}58%,90%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@keyframes k-curl{0%,15%{transform:scaleY(1)}70%,100%{transform:scaleY(.5)}}
+@media (prefers-reduced-motion:reduce){.fig svg [class*="k-"],.v-fig svg [class*="k-"]{animation:none!important}}
+
+/* record */
+.cv{list-style:none}
+.cv li{border-top:1px solid var(--rule)}
+.cv .row{display:grid;grid-template-columns:7rem 1fr;gap:1rem;padding:.9rem .6rem .9rem 0;text-decoration:none;color:inherit;transition:background .15s,padding .2s}
+.cv a.row{cursor:none}
+.cv a.row:hover{background:var(--paper-2);padding-left:.6rem;padding-right:0}
+.cv a.row:hover b{color:var(--acc)}
+.cv a.row:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.go{position:fixed;left:0;top:0;z-index:30;pointer-events:none;opacity:0;transition:opacity .12s;
+  --acc:var(--brown);margin:-1.05rem 0 0 1.1rem;padding:.42rem .75rem;background:var(--paper);color:var(--ink);border:1px solid var(--ink);
+  box-shadow:3px 3px 0 var(--acc);font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.go b{color:var(--acc);font-weight:500;margin-left:.35rem}
+.go.on{opacity:1}
+@media (hover:none){.go{display:none}.cv a.row{cursor:pointer}}
+.cv .w{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);padding-top:.35rem}
+.cv .tt{display:block;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;margin-top:.1rem}
+.cv li.school .tt{color:var(--acc)}
+.cv b{font-weight:500}
+.cv p{font-size:.98rem;color:var(--ink-2);margin-top:.15rem}
+.cv-h{margin:2.2rem 0 .4rem}
+.skills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem 2rem;margin-top:.6rem}
+.skills .chips{margin-top:.35rem}
+.dl{display:inline-flex;gap:.6rem;align-items:center;margin-top:1.8rem;font-family:var(--mono);font-size:.72rem;text-decoration:none;border:1px solid var(--ink);padding:.55rem 1rem}
+.dl:hover{background:var(--ink);color:var(--paper)}
+
+/* notebook */
+.notes{list-style:none;counter-reset:n}
+.note{padding:1.3rem 0;border-top:1px solid var(--rule);display:grid;grid-template-columns:3.2rem minmax(0,1fr) auto;gap:0 1rem}
+.note .no{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);padding-top:.45rem}
+.note h3 a{text-decoration:none}
+.note h3 a:hover{text-decoration:underline}
+.note .dek{font-size:1rem;color:var(--ink-2);margin-top:.2rem}
+.note .k{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.1em;color:var(--acc);text-align:right;padding-top:.45rem;white-space:nowrap}
+.note .k span{display:block;color:var(--ink-3);letter-spacing:.04em}
+.note.draft h3{color:var(--ink-3)}
+.note.draft .k{color:var(--ink-3)}
+.sublinks{list-style:none;margin-top:.6rem;font-family:var(--mono);font-size:.72rem;line-height:1.9}
+.sublinks li{padding-left:1.4rem;position:relative;color:var(--ink-2)}
+.sublinks li::before{content:"";position:absolute;left:.3rem;top:-.4rem;height:1.35rem;width:.7rem;border-left:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3)}
+.sublinks a{text-decoration:none}
+.sublinks a:hover{text-decoration:underline}
+.ext{font-size:.62rem;color:var(--ink-3);margin-left:.3rem}
+
+/* highlights subsections + video */
+.subsec{font-weight:400;font-size:1.35rem;margin:2rem 0 .2rem;display:flex;gap:.7rem;align-items:baseline}
+.subsec .n{font-family:var(--mono);font-size:.7rem;color:var(--acc)}
+.vol.r .subsec{flex-direction:row-reverse}
+.vids{display:grid;gap:1rem;margin:1rem 0 1.4rem}
+.vids.two{grid-template-columns:1fr 1fr}
+.vid{margin:0}
+.vposter,.vframe{position:relative;display:block;width:100%;aspect-ratio:16/9;padding:0;border:0;background:#0d0c0a;overflow:hidden}
+.vposter{cursor:pointer}
+.vposter img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s ease,opacity .3s}
+.vposter:hover img{transform:scale(1.03);opacity:.9}
+.vposter .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:4.2rem;height:4.2rem;border-radius:50%;background:var(--paper);color:var(--acc);display:flex;align-items:center;justify-content:center;font-size:1.3rem;padding-left:.25rem;box-shadow:0 6px 24px rgba(0,0,0,.35);transition:transform .2s,background .2s,color .2s}
+.vposter:hover .play{transform:translate(-50%,-50%) scale(1.08);background:var(--acc);color:var(--paper)}
+.vposter:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vid figcaption{display:flex;justify-content:space-between;gap:1rem;padding-top:.55rem;border-top:1px solid var(--rule);margin-top:.55rem}
+.vid figcaption .t{font-style:italic;font-size:1rem}
+.vid figcaption a{text-decoration:none}
+
+/* plates */
+.plate{margin:2.4rem 0}
+.plate img{width:100%;display:block;cursor:zoom-in;background:var(--paper-2)}
+.plate figcaption{display:flex;justify-content:space-between;gap:1rem;padding-top:.55rem;border-top:1px solid var(--rule);margin-top:.55rem}
+.plate figcaption .t{font-style:italic;font-size:1rem}
+.plate figcaption .t i{color:var(--ink-3)}
+.exif{font-family:var(--mono);font-size:.64rem;color:var(--ink-3);text-align:right;line-height:1.5}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.trio{display:grid;grid-template-columns:2fr 1fr;gap:1rem}
+.trio>div{display:grid;gap:1rem}
+.trio img,.pair img{height:100%;object-fit:cover}
+
+/* ledger */
+.ledger-bar{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.6rem}
+.seg{display:flex;gap:.3rem}
+.seg button{background:none;border:1px solid var(--rule);padding:.2rem .7rem;cursor:pointer;font-family:var(--mono);font-size:.66rem;color:var(--ink-2)}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:var(--paper)}
+.ledger{width:100%;border-collapse:collapse;font-size:1rem;margin-top:1rem}
+.ledger td,.ledger th{padding:.45rem .4rem;border-bottom:1px solid var(--rule);text-align:left;vertical-align:baseline}
+.ledger th{font-family:var(--mono);font-weight:400;font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.ledger td.n{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);width:2.6rem}
+.ledger td.l{font-style:italic;color:var(--ink-2)}
+.ledger td.d{font-family:var(--mono);font-size:.66rem;color:var(--ink-3);white-space:nowrap}
+.ledger tbody tr{cursor:pointer}
+.ledger tbody tr:hover td{background:var(--paper-2)}
+.peek{position:fixed;pointer-events:none;width:220px;border:6px solid var(--paper);box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transition:opacity .12s;z-index:20}
+.peek.on{opacity:1}
+
+/* gear */
+.gear-h{margin:2rem 0 .2rem}
+.gear{border-top:1px solid var(--ink);margin-top:.4rem}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 12rem;gap:.4rem 2rem;padding:1.2rem 0;border-bottom:1px solid var(--rule)}
+.item h3{font-size:1.2rem}
+.item .spec{font-family:var(--mono);font-size:.68rem;color:var(--ink-3);margin-top:.15rem}
+.item p{font-size:1rem;color:var(--ink-2);margin-top:.45rem}
+.item .use{font-family:var(--mono);font-size:.66rem;color:var(--ink-2)}
+.bar{height:6px;background:var(--paper-2);margin:.35rem 0 .45rem;border:1px solid var(--rule)}
+.bar i{display:block;height:100%;background:var(--acc)}
+.item details{grid-column:1/-1;font-family:var(--mono);font-size:.66rem;color:var(--ink-3)}
+.item summary{cursor:pointer;list-style:none}
+.item summary::before{content:"+ "}
+.item details[open] summary::before{content:"− "}
+.item details div{margin-top:.4rem;line-height:1.8;color:var(--ink-2)}
+.use .new{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;background:var(--acc);color:var(--paper);padding:.05rem .35rem;margin-right:.3rem}
+.retired .item{opacity:.6}
+.kn{display:inline-flex;align-items:center;justify-content:center;width:1.25rem;height:1.25rem;border-radius:50%;background:var(--acc);color:var(--paper);font-family:var(--mono);font-size:.62rem;margin-right:.5rem;vertical-align:.12rem}
+.item{scroll-margin-top:6rem;transition:background .6s}
+.item.flash{animation:flash 1.4s ease}
+@keyframes flash{0%,40%{background:var(--paper-2)}100%{background:transparent}}
+
+/* backpack figure */
+.pack{display:grid;grid-template-columns:minmax(0,var(--col)) var(--margin);column-gap:3rem;margin:.6rem 0 1rem;align-items:center}
+.pack-intro{font-style:italic;color:var(--ink-2);font-size:1.02rem;line-height:1.45;margin-bottom:.8rem}
+.pack-art{background:var(--paper-2);border:1px solid var(--rule);padding:1rem}
+.pack-art svg{display:block;width:100%;height:auto}
+.pack .it{cursor:pointer;transition:opacity .2s}
+.pack .it .hl{transition:stroke .15s,stroke-width .15s}
+.pack.focus .it:not(.on){opacity:.35}
+.pack .it.on .hl{stroke:var(--acc);stroke-width:4}
+.pack .it.bag{cursor:default}
+.pack .it.bag.on .hl{stroke-width:5}
+.pack .badge{cursor:pointer}
+.pack .badge circle{fill:var(--acc);stroke:var(--paper);stroke-width:2}
+.pack .badge text{fill:var(--paper)}
+.pack.focus .badge:not(.on){opacity:.35}
+.pack-key{list-style:none;font-size:1rem}
+.pack-key li{display:flex;align-items:flex-start;padding:.5rem 0;border-bottom:1px solid var(--rule);cursor:default;line-height:1.3;transition:color .15s}
+.pack-key li .kn{flex:none;margin-top:.1rem}
+.pack-key b{font-weight:500;display:block;font-size:1rem}
+.pack-key .ks{display:block;font-family:var(--mono);font-size:.62rem;color:var(--ink-3);margin-top:.15rem}
+.pack-key .kd{display:block;font-size:.88rem;color:var(--ink-2);margin-top:.15rem}
+.pack-key li.on b{color:var(--acc)}
+
+.cross{margin-top:5rem;padding:2.2rem 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;gap:1rem;cursor:pointer;text-decoration:none}
+.cross b{font-weight:300;font-size:clamp(1.6rem,3vw,2.2rem);font-style:italic}
+.cross:hover b{color:var(--acc)}
+footer{width:calc(100% - 4rem);max-width:calc(var(--col) + var(--margin) + 3rem);margin:4rem auto 3rem;padding-top:1.4rem;border-top:1px solid var(--rule);display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+
+.lb{position:fixed;inset:0;background:rgba(20,18,14,.94);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:50;padding:2rem;cursor:zoom-out}
+.lb.on{display:flex}
+.lb img{max-width:100%;max-height:82vh}
+.lb .exif{color:#a39b88;text-align:center;margin-top:1rem}
+.lb .t{color:#eee;font-style:italic;margin-top:.6rem}
+
+@media (max-width:1180px){.toc{display:none!important}:root{--margin:13rem}
+  .vol{column-gap:2rem}.vol.w{grid-template-columns:1fr minmax(0,var(--col)) var(--margin) 1fr}.vol.r{grid-template-columns:1fr var(--margin) minmax(0,var(--col)) 1fr}
+  .vol.r .sn{right:calc(100% + 2rem)}}
+/* ultra-wide: both volumes on one page, as a book spread */
+@media (min-width:2400px){
+  .page{display:grid;grid-template-columns:1fr 1fr}
+  body[data-vol] .vol.r, body[data-vol] .vol.w{display:grid}
+  .vol.r{grid-template-columns:1fr var(--margin) var(--col) 0;padding-right:1.5rem}
+  .vol.w{grid-template-columns:0 var(--col) var(--margin) 1fr;padding-left:1.5rem;border-left:1px solid var(--rule)}
+  body[data-vol] .toc-r, body[data-vol] .toc-w{display:block}
+  .toc-w{top:calc(7.5rem + 11rem);padding-top:1.2rem;border-top:1px solid var(--rule)}
+  .toc .alt,.cross,.mast .vols{display:none}
+  .spread-label{display:flex;gap:2.4rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.06em}
+  .spread-label b{font-weight:400;color:var(--brown)} .spread-label b+b{color:var(--teal)}
+  .page>footer{grid-column:1 / -1;max-width:none;width:calc(100% - 4rem)}
+}
+@media (max-width:860px){
+  body{font-size:1.08rem}
+  .cv .tt{display:inline;margin-left:.6rem}
+  .mast{grid-template-columns:1fr auto;padding:.7rem 16px;row-gap:.6rem}
+  .mast .vols{grid-column:1/-1;grid-row:2;justify-self:stretch}
+  .vols button{flex:1;justify-content:center}
+  .mast .r .hide-s{display:none}
+  .vol.r,.vol.w{grid-template-columns:minmax(0,1fr);padding:0 16px}
+  .vol.r>*,.vol.w>*,.vol>.wide{grid-column:1}
+  .sn,.vol.r .sn{position:static;display:block;width:auto;margin:.6rem 0 0;padding-left:.8rem;border-left:2px solid var(--acc);text-align:left}
+  .vol.r .hero{text-align:left}.vol.r .hero .meta{justify-content:flex-start}.vol.r h2{flex-direction:row}
+  .vol.r .colw{margin-left:0}
+  footer{width:calc(100% - 32px)}
+  .entry{grid-template-columns:minmax(0,1fr);row-gap:1rem}
+  .ledger td.d,.ledger th.d{display:none}
+  .cv .row{grid-template-columns:1fr;gap:.2rem}
+  .skills{grid-template-columns:1fr}
+  .note{grid-template-columns:minmax(0,1fr)}
+  .note .no{display:none}
+  .note .k{text-align:left;order:-1;padding:0 0 .2rem}
+  .note .k span{display:inline;margin-left:.6rem}
+  .item{grid-template-columns:minmax(0,1fr)}
+  section.split{grid-column:1 !important;padding-left:0}
+  .split .proj{grid-template-columns:minmax(0,1fr)}
+  .split .viewer{position:static;max-height:none;order:-1;margin-bottom:1.6rem}
+  .v-meta{grid-template-columns:1fr}
+  .v-frame.doc{height:70vh}
+  .pack{grid-template-columns:minmax(0,1fr);row-gap:1rem}
+  .vids.two{grid-template-columns:1fr}
+  .hero.has-mark{grid-template-columns:minmax(0,1fr)}
+  .hero .mark{grid-column:1;grid-row:auto;justify-self:start;width:7.5rem;margin-bottom:1.2rem;align-items:flex-start}
+  .hero .mark span{display:none}
+  .vol.r .hero.has-mark{grid-template-columns:minmax(0,1fr)}
+  .vol.r .hero.has-mark>*,.vol.r .hero .mark{grid-column:1}
+  .hero .mark .portrait{margin-top:1rem}
+  .pack-art{padding:.5rem}
+  .cv a::after{content:" ↗";color:var(--acc);font-family:var(--mono);font-size:.7rem}
+  .go{display:none!important}
+}
+</style>
+</head>
+<body data-vol="robotics">
+<div class="mast">
+  <span>Kashish Garg</span>
+  <div class="spread-label"><b>Vol. I · Robotics</b><b>Vol. II · Wildlife</b></div>
+  <div class="vols" id="vols"><button data-v="robotics" class="on">VOL. I <i>Robotics</i></button><button data-v="wildlife">VOL. II <i>Wildlife</i></button></div>
+  <span class="r"><a class="hide-s" href="mailto:kashishgarg9@gmail.com">contact</a>
+    <details class="socials" id="socials"><summary>socials <i>▾</i></summary>
+      <div class="menu">
+        <a href="https://www.linkedin.com/in/kashishgarg/" target="_blank" rel="noopener">LinkedIn<span>↗</span></a>
+        <a href="https://github.com/kashishkebab9" target="_blank" rel="noopener">GitHub<span>↗</span></a>
+        <a href="https://www.instagram.com/gibbons_n_gargoyles/" target="_blank" rel="noopener">Instagram<span>↗</span></a>
+        <a href="https://www.youtube.com/watch?v=HnbwmKj1JCw" target="_blank" rel="noopener">YouTube<span>↗</span></a>
+      </div></details><button class="theme" id="tt" aria-label="Toggle theme">◐</button></span>
+</div>
+
+<nav class="toc toc-r" id="toc-r"></nav>
+<nav class="toc toc-w" id="toc-w"></nav>
+
+<main class="page">
+<!-- ═══════════════ VOLUME I · ROBOTICS ═══════════════ -->
+<div class="vol r">
+  <header class="hero wide has-mark" id="r-intro">
+    <a class="mark" href="https://www.linkedin.com/in/kashishgarg/" target="_blank" rel="noopener" aria-label="Kashish Garg on LinkedIn">
+      <img class="portrait" src="assets/brand/monkeyland.webp" alt="Kashish Garg in a green T-shirt and cap, with a squirrel monkey perched on the cap and two more held in hand">
+      <span>Kashish Garg</span></a>
+    <div class="cap" style="margin-bottom:1.3rem">Volume I — Robotics — 2017–2026</div>
+    <h1>Hi! I'm Kashish Garg, a <em> Full-Stack Robotics Engineer</em></h1>
+    <p class="dek">Senior Robotics Engineer at MeshMap Labs. Penn GRASP alum.</p>
+  </header>
+  <div class="sn-wrap wide">
+    <p class="lede">For the past eight years, I've worked across robotics, from electromechanical design and PCB development to mapping, perception, and optimal control. Along the way, I've learned by building, experimenting, and getting my hands dirty. I'm particularly interested in mapping the world around us and developing robots that can take on work that's dull, dirty, or dangerous.</p>
+  </div>
+
+  <section id="r-projects" class="wide">
+    <h2><span class="n">01</span>Projects</h2>
+    <div class="proj" id="proj">
+      <div class="entries collapsed" id="projects"></div>
+      <aside class="viewer" id="viewer" aria-live="polite"></aside>
+    </div>
+    <button class="toggle-more" id="more">Show all 9 projects ↓</button>
+  </section>
+
+  <section id="r-record" class="wide">
+    <h2><span class="n">02</span>Record</h2>
+    <div class="colw">
+      <div class="cap cv-h">Timeline: newest first</div><ul class="cv" id="cv"></ul>
+      <div class="cap cv-h">Toolkit</div><div class="skills" id="skills"></div>
+      <a class="dl" href="#" onclick="alert('Placeholder: link your résumé PDF here.');return false">↓ Download résumé (PDF)</a>
+    </div>
+  </section>
+
+  <section id="r-notebook" class="wide">
+    <h2><span class="n">03</span>Notebook</h2>
+    <div class="sn-wrap colw">
+      <p class="intro">Tutorials, course notes and things I'm still working out. Each entry can open into sub-pages. Entries marked ↗ still live on the old site.</p>
+    </div>
+    <ol class="notes colw" id="notes"></ol>
+  </section>
+
+  <a class="cross wide" data-go="wildlife"><span class="cap">Continue to Volume II</span><b>Wildlife →</b></a>
+</div>
+
+<!-- ═══════════════ VOLUME II · WILDLIFE ═══════════════ -->
+<div class="vol w">
+  <header class="hero wide has-mark" id="w-intro">
+    <a class="mark" href="https://www.instagram.com/gibbons_n_gargoyles/" target="_blank" rel="noopener" aria-label="gibbons_n_gargoyles on Instagram">
+      <img class="m-light" src="assets/brand/gargoyle.webp" alt="Pen-and-ink drawing of a gibbon-faced gargoyle perched on a cathedral ledge">
+      <img class="m-dark" src="assets/brand/gargoyle-dark.webp" alt="Pen-and-ink drawing of a gibbon-faced gargoyle perched on a cathedral ledge">
+      <span>@gibbons_n_gargoyles</span></a>
+    <div class="cap" style="margin-bottom:1.3rem">Volume II — Wildlife — 2025–2026</div>
+    <h1>Wildlife Filmmaking and Photography, <em>in urban environments</em></h1>
+    <p class="dek">Photographs and a running species log from Prospect Park, Central Park, the Bronx and wherever else I can bring a camera.</p>
+    <div class="meta"><span class="mono" id="w-count"></span><span class="mono">◦ Sony α7R IV</span><span class="mono">◦ Brooklyn, NY</span></div>
+  </header>
+  <div class="sn-wrap wide">
+    <p class="lede">This volume grew out of <i>FlockBog</i>, a website log I started to keep track of every bird I managed to frame. I began wildlife photography in October 2025 and I started filming in July 2026. I have gone birding and filming in Japan, China, and New Orleans, and yet, my favorite place is Prospect Park, a 10 minute walk from me! Check out my content here and on <a href="https://www.instagram.com/gibbons_n_gargoyles/" target="_blank" rel="noopener">Instagram</a>/<a href="https://www.youtube.com/@gibbons_n_gargoyles" target="_blank" rel="noopener">Youtube</a> with the handle @gibbons_n_gargoyles</p>
+  </div>
+
+  <section id="w-highlights" class="wide">
+    <h2><span class="n">01</span>Highlights</h2>
+    <div id="vid-wrap">
+      <h3 class="subsec"><span class="n">a</span>Video</h3>
+      <div class="vids" id="videos"></div>
+    </div>
+    <h3 class="subsec"><span class="n">b</span>Photography</h3>
+    <div id="plates"></div>
+  </section>
+
+  <section id="w-gear" class="wide">
+    <h2><span class="n">02</span>Gear</h2>
+    <figure class="pack">
+      <div class="pack-art" id="pack-art"></div>
+      <figcaption>
+        <p class="pack-intro">What goes into the field with me, packed the way it rides.</p>
+        <ol class="pack-key" id="pack-key"></ol>
+        <p class="mono" style="margin-top:.8rem">Hover a piece to find it in the bag.</p>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="w-ledger">
+    <h2><span class="n">03</span>Specimen ledger</h2>
+    <div class="ledger-bar"><span class="mono" id="l-count"></span>
+      <div class="seg" id="seg"><button class="on" data-f="all">all</button><button data-f="bird">birds</button><button data-f="other">not birds</button></div></div>
+    <table class="ledger"><thead><tr><th>No.</th><th>Common</th><th>Latin</th><th class="d">First logged</th></tr></thead><tbody id="ledger-b"></tbody></table>
+  </section>
+
+  <a class="cross wide" data-go="robotics"><span class="cap">Back to Volume I</span><b>← Robotics</b></a>
+</div>
+
+<footer class="mono"><span>Kashish Garg · <a href="mailto:kashishgarg9@gmail.com">kashishgarg9@gmail.com</a> · <a href="https://github.com/kashishkebab9">GitHub</a> · <a href="https://www.linkedin.com/in/kashishgarg/">LinkedIn</a></span><span>Set in Newsreader &amp; IBM Plex Mono</span></footer>
+</main>
+
+<img class="peek" id="peek" alt="">
+<div class="go" id="go" aria-hidden="true">Go to link<b>↗</b></div>
+<div class="lb" id="lb"><img alt=""><div class="t"></div><div class="exif"></div></div>
+
+<script src="data/robotics.js"></script>
+<script>
+// wild.js and highlights.js are rewritten by FlockBog whenever its library changes, so always
+// fetch them fresh (a query string defeats the browser cache). Parser-inserted, so they still
+// run in order before the page script below. highlights.js may be absent.
+window.WILD_HIGHLIGHTS=[]; window.WILD_VIDEOS=[];
+for (const f of ['data/wild.js','data/highlights.js','data/videos.js'])
+  document.write(`<script src="${f}?v=${Date.now()}"><\/script>`);
+</script>
+<script src="data/gear.js"></script>
+<script src="data/backpack.js"></script>
+<script>
+const $=s=>document.querySelector(s), W=window.WILD, birds=W.filter(w=>w.kind==='bird');
+const pad=(n,k=2)=>String(n).padStart(k,'0');
+const ZOO=new Set(['African Penguin','American Flamingo','Arctic Tern','Inca Tern','Roseate Spoonbill','Von der Decken’s Hornbill']);
+const short=l=>(l||'').replace(/ Di III.*| OSS| DG DN.*/,'').replace('Unknown (50542)','unidentified lens');
+const exif=p=>[short(p.lens),p.date,p.location&&p.location.replace(', United States','')].filter(Boolean).join(' · ');
+
+/* ── Volume I ── */
+const mediaTag=p=>{const v=p.media.filter(m=>!m.doc).length,d=p.media.filter(m=>m.doc).length;
+  return [v?'▶ video':'',d?'▤ pdf':'',p.links.length?'↗ '+p.links.length+' link'+(p.links.length>1?'s':''):''].filter(Boolean).join(' · ')};
+$('#projects').innerHTML=PROJECTS.map((p,i)=>`
+ <article class="entry" data-p="${p.id}" tabindex="0" role="button" aria-label="Open ${p.title}">
+  <div><div class="cap">${pad(i+1)} · ${p.tag}</div><h3 style="margin-top:.4rem">${p.title}</h3><div class="sub">${p.sub}</div><p>${p.body}</p>
+   <div class="chips">${p.stack.map(s=>`<span>${s}</span>`).join('')}</div>
+   <div class="open-hint">Open →</div></div>
+  <div class="side"><div class="fig">${FIG(p.fig)}</div><div class="mono">Fig. ${i+1}: ${p.title.toLowerCase()}</div>
+   <dl class="kv"><dt>dates</dt><dd>${p.when}</dd><dt>state</dt><dd>${p.status}</dd></dl>
+   ${mediaTag(p)?`<span class="has">${mediaTag(p)}</span>`:''}</div>
+ </article>`).join('');
+$('#more').onclick=e=>{const c=$('#projects').classList.toggle('collapsed');e.target.textContent=c?'Show all 9 projects ↓':'Show fewer ↑'};
+
+const embed=m=>m.type==='pdf'?`${m.src}#pagemode=none&view=FitH`:m.type==='youtube'
+  ?`https://www.youtube.com/embed/${m.id}?rel=0&playsinline=1${location.protocol.startsWith('http')?'&origin='+encodeURIComponent(location.origin):''}`
+  :`https://drive.google.com/file/d/${m.id}/preview`;
+const ext=m=>m.type==='pdf'?m.src:m.type==='youtube'?`https://www.youtube.com/watch?v=${m.id}`:`https://drive.google.com/file/d/${m.id}/view`;
+function showMedia(p,k){
+  const m=p.media[k];
+  $('#v-tabs')&&$('#v-tabs').querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',j===k));
+  // YouTube refuses embeds with no Referer (error 153), which is what a file:// page sends.
+  const offline=location.protocol==='file:'&&m.type==='youtube';
+  $('#v-stage').innerHTML=`<div class="v-frame${m.doc?' doc':''}">${offline
+    ?`<a class="v-poster" href="${ext(m)}" target="_blank" rel="noopener" style="background-image:url('https://i.ytimg.com/vi/${m.id}/hqdefault.jpg')"><span>▶ Watch on YouTube</span></a>`
+    :`<iframe src="${embed(m)}" title="${m.title}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>`}</div>
+    <div class="v-cap mono"><span>${m.title}</span><a href="${ext(m)}" target="_blank" rel="noopener">open ${m.type==='youtube'?'on YouTube':m.type==='pdf'?'PDF':'in Drive'} ↗</a></div>`;
+}
+function openProject(id){
+  const i=PROJECTS.findIndex(p=>p.id===id),p=PROJECTS[i];if(!p)return;
+  const sec=$('#r-projects'),wasOpen=sec.classList.contains('split');
+  sec.classList.add('split');
+  document.querySelectorAll('#projects .entry').forEach(e=>e.classList.toggle('on',e.dataset.p===id));
+  const prev=PROJECTS[(i+PROJECTS.length-1)%PROJECTS.length],next=PROJECTS[(i+1)%PROJECTS.length];
+  $('#viewer').innerHTML=`
+    <div class="v-head"><div><div class="cap">${pad(i+1)} · ${p.tag}</div><h3>${p.title}</h3><div class="sub" style="font-style:italic;color:var(--ink-2)">${p.sub}</div></div>
+      <button class="v-x" id="v-x">✕ close</button></div>
+    ${p.media.length>1?`<div class="v-tabs" id="v-tabs">${p.media.map((m,k)=>`<button data-k="${k}">${m.doc?'▤':'▶'} ${m.label}</button>`).join('')}</div>`:''}
+    <div id="v-stage">${p.media.length?'':`${p.photo?`<figure class="v-photo"><img src="${p.photo}" alt="${p.imgAlt||p.title}"></figure>`:`<div class="v-fig">${FIG(p.fig)}</div>`}<p class="v-empty">${p.note||(p.photo?'':'No video or document for this one yet.')}</p>`}</div>
+    ${p.links.length?`<div class="v-links">${p.links.map(l=>`<a href="${l.href}"${l.internal?'':' target="_blank" rel="noopener"'}>${l.label}${l.internal?' →':' ↗'}</a>`).join('')}</div>`:''}
+    <div class="v-meta"><div><div class="mono">dates</div>${p.when}</div><div><div class="mono">state</div>${p.status}</div>
+      <div><div class="mono">stack</div><div class="chips">${p.stack.map(s=>`<span>${s}</span>`).join('')}</div></div></div>
+    <div class="v-nav"><button data-open="${prev.id}">← ${prev.title}</button><button data-open="${next.id}">${next.title} →</button></div>`;
+  if(p.media.length)showMedia(p,0);
+  $('#v-tabs')&&$('#v-tabs').addEventListener('click',e=>{const b=e.target.closest('button');b&&showMedia(p,+b.dataset.k)});
+  $('#v-x').onclick=closeProject;
+  history.replaceState(null,'','#r-projects/'+id);
+  const narrow=matchMedia('(max-width:860px)').matches;
+  if(narrow) $('#viewer').scrollIntoView({behavior:'smooth',block:'start'});
+  else if(!wasOpen) sec.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeProject(){const sec=$('#r-projects');const on=$('#projects .entry.on');sec.classList.remove('split');$('#viewer').innerHTML='';
+  document.querySelectorAll('#projects .entry').forEach(e=>e.classList.remove('on'));history.replaceState(null,'','#r-projects');
+  on&&on.scrollIntoView({block:'center'})}
+$('#projects').addEventListener('click',e=>{const en=e.target.closest('.entry');en&&openProject(en.dataset.p)});
+$('#projects').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const en=e.target.closest('.entry');if(en){e.preventDefault();openProject(en.dataset.p)}}});
+$('#viewer').addEventListener('click',e=>{const b=e.target.closest('[data-open]');b&&openProject(b.dataset.open)});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#r-projects').classList.contains('split')&&!$('#lb').classList.contains('on'))closeProject()});
+
+const yr=w=>+(w.match(/\d{4}/)||[0])[0];
+const timeline=[...WORK.map(w=>({when:w.when,t:'Work',head:`<b>${w.role}</b>, ${w.org}`,note:w.note,url:w.url,who:w.org})),
+                ...EDU.map(e=>({when:e.when,t:'School',head:`<b>${e.deg}</b>, ${e.school}`,note:'',url:e.url,who:e.school}))]
+  .sort((a,b)=>yr(b.when)-yr(a.when));
+$('#cv').innerHTML=timeline.map(x=>{const inner=`<span class="w">${x.when}<span class="tt">${x.t}</span></span><div>${x.head}${x.note?`<p>${x.note}</p>`:''}</div>`;
+  return `<li class="${x.t.toLowerCase()}">${x.url?`<a class="row" href="${x.url}" target="_blank" rel="noopener" aria-label="${x.who} website (opens in new tab)">${inner}</a>`:`<div class="row">${inner}</div>`}</li>`}).join('');
+/* cursor label for record links */
+const go=$('#go');
+$('#cv').addEventListener('mousemove',e=>{const a=e.target.closest('a.row');if(!a){go.classList.remove('on');return}
+  go.style.transform=`translate(${e.clientX}px,${e.clientY}px)`;go.classList.add('on')});
+$('#cv').addEventListener('mouseleave',()=>go.classList.remove('on'));
+$('#skills').innerHTML=Object.entries(SKILLS).map(([k,v])=>`<div><div class="mono">${k}</div><div class="chips">${v.map(s=>`<span>${s}</span>`).join('')}</div></div>`).join('');
+
+const lnk=(n)=>n.href?`<a href="${n.href}"${n.external?' target="_blank" rel="noopener"':''}>${n.title}</a>${n.external?'<span class="ext">↗</span>':''}`:n.title;
+$('#notes').innerHTML=NOTES.map((n,i)=>`<li class="note ${n.status}"><span class="no">N.${pad(i+1)}</span>
+  <div><h3>${lnk(n)}</h3><div class="dek">${n.dek}</div>
+   ${n.children.length?`<ul class="sublinks">${n.children.map(c=>`<li>${lnk(c)}</li>`).join('')}</ul>`:''}
+   <div class="chips">${n.tags.map(t=>`<span>${t}</span>`).join('')}</div></div>
+  <div class="k">${n.status==='draft'?'Draft':n.kind}<span>${n.when}</span></div></li>`).join('');
+
+/* ── Volume II ── */
+$('#w-count').textContent=`◦ ${birds.length} bird species · ${W.length-birds.length} other subjects`;
+const by=n=>W.find(w=>w.name.startsWith(n));
+/* Highlights: photos flagged "★ Highlight on portfolio" in FlockBog (data/highlights.js) come first, in flag order;
+   the default picks then fill up to MAX_PLATES, skipping species that already have a flagged photo.
+   Layout cycles one → trio → one → pair. */
+const HL=window.WILD_HIGHLIGHTS||[];
+const MAX_PLATES=4;
+const asShot=(w,p)=>({src:p.src,name:w.name,latin:w.latin,date:p.date,time:p.time,camera:p.camera,lens:p.lens,location:p.location});
+const DEFAULTS=['Von der','Roseate','Arctic','American Robin','Brant','Osprey','Red-eared','Dragonfly','European Starling']
+  .map(by).filter(Boolean).filter(w=>!HL.some(h=>h.name===w.name)).map(w=>asShot(w,w.photos[0]));
+const SHOTS=[...HL,...DEFAULTS].slice(0,MAX_PLATES);
+const shotImg=i=>`<img src="${SHOTS[i].src}" alt="${SHOTS[i].name}" data-shot="${i}">`;
+const capT=g=>g.map(i=>`${SHOTS[i].name}${SHOTS[i].latin?` <i>${SHOTS[i].latin}</i>`:''}`).join('; ');
+const capX=i=>{const x=exif(SHOTS[i]);return x?`<span class="exif">${x}</span>`:''};
+function plates(){
+  const q=SHOTS.map((_,i)=>i),out=[],pattern=['one','trio','one','pair'];let n=0;
+  while(q.length){let kind=pattern[n++%pattern.length];
+    if(kind==='trio'&&q.length<3)kind=q.length===2?'pair':'one';
+    if(kind==='pair'&&q.length<2)kind='one';
+    const g=q.splice(0,kind==='one'?1:kind==='pair'?2:3);
+    const art=kind==='one'?shotImg(g[0]):kind==='pair'?`<div class="pair">${g.map(shotImg).join('')}</div>`:`<div class="trio">${shotImg(g[0])}<div>${shotImg(g[1])}${shotImg(g[2])}</div></div>`;
+    out.push(`<figure class="plate">${art}<figcaption><span class="t">${capT(g)}</span>${capX(g[0])}</figcaption></figure>`);
+  }
+  return out.join('');
+}
+$('#plates').innerHTML=plates();
+
+/* Video: newest long-form uploads (data/videos.js, refreshed by tools/sync-youtube.mjs).
+   Shown as a poster; the YouTube player only loads on click. */
+const VIDS=(window.WILD_VIDEOS||[]).slice(0,2);
+const fmtDay=d=>d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
+if(!VIDS.length) $('#vid-wrap').remove();
+else{
+  $('#videos').classList.toggle('two',VIDS.length>1);
+  $('#videos').innerHTML=VIDS.map(v=>`<figure class="vid">
+    <button class="vposter" data-yt="${v.id}" aria-label="Play ${v.title.replace(/"/g,'&quot;')}">
+      <img src="https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg" alt="" onload="if(this.naturalWidth<200)this.src='https://i.ytimg.com/vi/${v.id}/hqdefault.jpg'">
+      <span class="play" aria-hidden="true">▶</span></button>
+    <figcaption><span class="t">${v.title}</span><span class="exif">${fmtDay(v.published)}${v.published?' · ':''}<a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">YouTube ↗</a></span></figcaption></figure>`).join('');
+  $('#videos').addEventListener('click',e=>{const b=e.target.closest('.vposter');if(!b)return;
+    const id=b.dataset.yt;
+    if(location.protocol==='file:'){open(`https://www.youtube.com/watch?v=${id}`,'_blank');return}
+    b.outerHTML=`<div class="vframe"><iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0&playsinline=1&origin=${encodeURIComponent(location.origin)}" title="YouTube video" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`});
+}
+
+function ledger(f){const rows=W.map((w,i)=>({w,i})).filter(({w})=>f==='all'||w.kind===f);
+  $('#l-count').textContent=`${rows.length} entries`;
+  $('#ledger-b').innerHTML=rows.map(({w,i},j)=>`<tr data-n="${i}"><td class="n">${pad(j+1,3)}</td><td>${w.name}${ZOO.has(w.name)?' <span class="mono">zoo</span>':''}</td><td class="l">${w.latin||'—'}</td><td class="d">${w.photos[0]?.date||''}</td></tr>`).join('')}
+ledger('all');
+$('#seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('#seg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));ledger(b.dataset.f)});
+const peek=$('#peek');
+$('#ledger-b').addEventListener('mousemove',e=>{const tr=e.target.closest('tr');if(!tr)return;const w=W[tr.dataset.n];if(peek.dataset.n!==tr.dataset.n){peek.src=w.thumb;peek.dataset.n=tr.dataset.n}peek.style.left=Math.min(e.clientX+24,innerWidth-240)+'px';peek.style.top=Math.min(e.clientY-60,innerHeight-180)+'px';peek.classList.add('on')});
+$('#ledger-b').addEventListener('mouseleave',()=>peek.classList.remove('on'));
+$('#ledger-b').addEventListener('click',e=>{const tr=e.target.closest('tr');tr&&openLb(+tr.dataset.n,0)});
+
+/* ── backpack graphic + key ── */
+$('#pack-art').innerHTML=BACKPACK_SVG;
+$('#pack-key').innerHTML=GEAR.map(g=>`<li data-k="${g.bag}"><span class="kn">${g.bag}</span><div><b>${g.name}</b><span class="ks">${g.spec}</span><span class="kd">${g.note}</span></div></li>`).join('');
+const pack=$('.pack');
+function focusK(k){pack.classList.toggle('focus',!!k);pack.querySelectorAll('[data-k]').forEach(el=>el.classList.toggle('on',el.dataset.k===String(k)))}
+pack.addEventListener('mouseover',e=>{const t=e.target.closest('[data-k]');focusK(t?t.dataset.k:null)});
+pack.addEventListener('mouseleave',()=>focusK(null));
+
+/* ── lightbox ── */
+const lb=$('#lb');
+function showLb(p,name,latin){lb.querySelector('img').src=p.src;lb.querySelector('.t').textContent=latin?`${name}: ${latin}`:name;lb.querySelector('.exif').textContent=[p.camera,p.lens,[p.date,p.time].filter(Boolean).join(' '),p.location].filter(Boolean).join('  ·  ');lb.classList.add('on')}
+function openLb(n,k){const w=W[n];showLb(w.photos[k],w.name,w.latin)}
+document.addEventListener('click',e=>{const h=e.target.closest('img[data-shot]');if(h){const x=SHOTS[+h.dataset.shot];showLb(x,x.name,x.latin)}});
+lb.onclick=()=>lb.classList.remove('on');addEventListener('keydown',e=>e.key==='Escape'&&lb.classList.remove('on'));
+
+/* ── volumes, TOC, routing ── */
+const TOC={robotics:[['r-intro','00 Preface'],['r-projects','01 Projects'],['r-record','02 Record'],['r-notebook','03 Notebook']],
+           wildlife:[['w-intro','00 Preface'],['w-highlights','01 Highlights'],['w-gear','02 Gear'],['w-ledger','03 Specimen ledger']]};
+const NAME={robotics:'I · Robotics',wildlife:'II · Wildlife'};
+['robotics','wildlife'].forEach(v=>{const other=v==='robotics'?'wildlife':'robotics';
+  $('#toc-'+v[0]).innerHTML=`<div class="cap">Vol. ${NAME[v]}</div>`+TOC[v].map(([id,t])=>`<a href="#${id}" data-id="${id}">${t}</a>`).join('')+
+    `<div class="alt"><a href="#" data-go="${other}">→ Vol. ${NAME[other]}</a></div>`});
+const spy=new IntersectionObserver(es=>es.forEach(en=>{if(!en.isIntersecting)return;const id=en.target.id,t=$('#toc-'+id[0]);
+  t.querySelectorAll('a[data-id]').forEach(a=>a.classList.toggle('on',a.dataset.id===id))}),{rootMargin:'-35% 0px -60% 0px'});
+[...TOC.robotics,...TOC.wildlife].forEach(([id])=>spy.observe(document.getElementById(id)));
+const spread=matchMedia('(min-width:2400px)');
+function setVol(v,target,instant){
+  document.body.dataset.vol=v;
+  $('#vols').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  const el=target&&document.getElementById(target);
+  if(el) el.scrollIntoView({behavior:instant?'auto':'smooth'}); else if(!spread.matches) scrollTo({top:0,behavior:instant?'auto':'smooth'});
+  history.replaceState(null,'','#'+(target||v));
+}
+document.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');if(g){e.preventDefault();setVol(g.dataset.go);return}
+  const v=e.target.closest('#vols button');if(v){setVol(v.dataset.v);return}
+  const a=e.target.closest('.toc a[data-id]');if(a){e.preventDefault();document.getElementById(a.dataset.id).scrollIntoView({behavior:'smooth'});history.replaceState(null,'','#'+a.dataset.id)}
+});
+const h=location.hash.slice(1);
+const [hId,hProj]=h.split('/');
+setVol(h.startsWith('w')||h==='wildlife'?'wildlife':'robotics',/^[rw]-/.test(hId)?hId:null,true);
+if(hProj)openProject(hProj);
+
+/* socials dropdown: close on outside click / Esc */
+document.addEventListener('click',e=>{const d=$('#socials');if(d.open&&!d.contains(e.target))d.open=false});
+addEventListener('keydown',e=>{if(e.key==='Escape')$('#socials').open=false});
+$('#tt').onclick=()=>{const r=document.documentElement,d=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=d==='dark'?'light':'dark'};
+</script>
+</body>
+</html>

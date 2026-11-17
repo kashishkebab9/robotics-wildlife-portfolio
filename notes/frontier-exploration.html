@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Frontier-Based Exploration — Notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="note.css">
+</head>
+<body>
+<div class="mast"><a href="../index.html#r-notebook">← Vol. I · Notebook</a><span>N.01 · Tutorial</span></div>
+<nav class="toc" id="toc"><div class="cap" style="margin-bottom:.5rem;color:var(--acc)">On this page</div>
+  <a href="#s0">0 Architecture</a><a href="#s1">1 Find frontiers</a><a href="#s2">2 Cluster</a><a href="#s3">3 Centroids</a><a href="#s4">4 A* &amp; result</a></nav>
+<main class="page">
+  <header>
+    <div class="cap">Notebook · N.01 · Tutorial</div>
+    <h1 style="margin-top:.8rem">Frontier-Based Exploration in <span style="white-space:nowrap">ROS &amp; C++</span></h1>
+    <p class="dek">Using ROS, grid_map and C++ to send a robot to the edge of what it knows.</p>
+    <div class="meta"><span class="mono">◦ ROS · C++ · grid_map · A*</span><span class="mono">◦ GRASP Lab, Philadelphia</span><span class="mono">◦ ~10 min read</span></div>
+  </header>
+
+  <figure class="wide"><img src="../assets/notes/frontier/occupancy-grid.png" alt="Occupancy grid of the GRASP Laboratory third floor">
+    <figcaption class="mono"><span>Fig. 1: occupancy grid of the GRASP Laboratory's third floor, Philadelphia.</span></figcaption></figure>
+
+  <div class="sn-wrap"><p>Once you can generate an occupancy grid like the one above, you can start writing a node for frontier exploration. The grid uses three colours: <span class="key" style="background:#7d8a86"></span>grey is unknown space, <span class="key" style="background:#b03fb8"></span>purple is known and occupied, and <span class="key" style="background:#2b2b2b"></span>black is known and free. The cells we care about are <b>frontiers</b>: black cells that border grey, in other words free space next to unknown space.<sup>1</sup></p>
+    <aside class="sn"><b>1.</b> The full code is available on request: <a href="mailto:kashishgarg9@gmail.com">kashishgarg9@gmail.com</a>.</aside></div>
+
+  <p>The loop has five steps:</p>
+  <ol class="steps"><li>Flood-fill to find frontier cells</li><li>Group them into clusters above a size threshold</li><li>Take each cluster's centroid</li><li>Run A* to find the centroid closest to the robot</li><li>Send a position or velocity goal to that centroid</li></ol>
+
+  <figure class="wide"><img src="../assets/notes/frontier/frontier-clusters.png" alt="Left to right: all frontier cells, detected clusters, and cluster centroids">
+    <figcaption class="mono"><span>Fig. 2: left to right, all frontier cells, the clusters, and their centroids.</span></figcaption></figure>
+
+  <h2 id="s0"><span class="n">0</span>Architecture</h2>
+  <p>Before implementing the steps, decide how the ROS node is structured. From a bird's-eye view it needs <b>two subscribers and one publisher</b>. The subscribers take the occupancy grid and the robot's current position. The publisher sends the position goals the loop produces.</p>
+  <p>Grid handling uses Anybotics' <code>grid_map</code> library, which provides a lot of useful tools for working with grids.</p>
+
+  <h2 id="s1"><span class="n">1</span>Find frontiers</h2>
+  <p>The first job is to work out where the frontiers of the map are, using the flood-fill algorithm. The entry point clears the previous result, flood-fills from the robot's cell, and publishes the frontier cells as an RViz marker:</p>
+  <div class="code wide" data-name="find_frontiers()"><pre><code>void frontier_finder::find_frontiers() {
+
+    this-&gt;frontier_indices.clear();
+    this-&gt;flood_fill(robot_index);
+    visualization_msgs::Marker points;
+    points.action = visualization_msgs::Marker::DELETEALL;
+    points.header.frame_id = this-&gt;map_frame;
+    points.ns = "frontier_markers";
+    points.action = visualization_msgs::Marker::ADD;
+    points.pose.orientation.w = 1.0;
+    points.id = 0;
+    points.type = visualization_msgs::Marker::POINTS;
+
+    points.scale.x = 0.1;
+    points.scale.y = 0.1;
+
+    points.color.g = 1.0f;
+    points.color.a = 1.0;
+
+    if ( this-&gt;frontier_indices.size() &gt; 0 ) {
+      for (grid_map::Index element : this-&gt;frontier_indices) {
+        grid_map::Position frontier_cell_pos;
+        this-&gt;gm.getPosition(element, frontier_cell_pos);
+
+        geometry_msgs::Point p;
+        p.x = frontier_cell_pos.x();
+        p.y = frontier_cell_pos.y();
+        p.z = 0;
+
+        points.points.push_back(p);
+      }
+    }
+
+    this-&gt;frontier_marker_pub.publish(points);
+}</code></pre></div>
+
+  <div class="sn-wrap"><p>Flood-fill can be written recursively or iteratively. For exploration, use the iterative version: the recursive one will, without doubt, run into memory-allocation problems.<sup>2</sup></p>
+    <aside class="sn"><b>2.</b> A <code>std::stack</code> (last in, first out) of indices to visit replaces the call stack.</aside></div>
+  <p>Start at the robot's position and push its cell onto <code>visited_indices</code>. While the stack isn't empty, take the top cell, mark it in the <code>visited_cells</code> layer of the <code>grid_map</code>, and check <code>is_frontier()</code>. If it is a frontier, append it to <code>frontier_indices</code>, a plain <code>std::vector</code>. Then push every neighbour that is unvisited, unoccupied and known.</p>
+  <div class="code wide" data-name="flood_fill()"><pre><code>void frontier_finder::flood_fill(grid_map::Index index) {
+
+  std::stack&lt;grid_map::Index&gt; visited_indices;
+  visited_indices.push(index);
+
+  while (!visited_indices.empty()) {
+    grid_map::Index iter = visited_indices.top();
+    visited_indices.pop();
+    this-&gt;gm.at("visited_cells", iter) = 1;
+
+    if(is_frontier(iter)) {
+      this-&gt;frontier_indices.push_back(iter);
+    } else {
+    }
+
+    grid_map::Index n_idx ;
+    grid_map::Index e_idx ;
+    grid_map::Index s_idx ;
+    grid_map::Index w_idx ;
+
+    n_idx &lt;&lt; iter.x(),     iter.y() - 1 ;
+    e_idx &lt;&lt; iter.x() + 1, iter.y()     ;
+    s_idx &lt;&lt; iter.x(),     iter.y() + 1 ;
+    w_idx &lt;&lt; iter.x() - 1, iter.y()     ;
+
+    std::vector&lt;grid_map::Index&gt; neighbors;
+    neighbors.push_back(n_idx);
+    neighbors.push_back(e_idx);
+    neighbors.push_back(s_idx);
+    neighbors.push_back(w_idx);
+
+    for (grid_map::Index neighbor : neighbors) {
+      if(this-&gt;gm.at("eroded_occ", neighbor) == 0 &amp;&amp; this-&gt;gm.at("visited_cells", neighbor) == 0) {
+        visited_indices.push(neighbor);
+      }
+    }
+  }
+
+}</code></pre></div>
+
+  <p>A cell is a frontier if any of its four neighbours is unknown, which is <code>NaN</code> in the eroded occupancy layer:</p>
+  <div class="code wide" data-name="is_frontier()"><pre><code>bool frontier_finder::is_frontier(grid_map::Index idx) {
+    grid_map::Index n_idx ;
+    grid_map::Index e_idx ;
+    grid_map::Index s_idx ;
+    grid_map::Index w_idx ;
+
+    n_idx &lt;&lt; idx.x(),     idx.y() - 1 ;
+    e_idx &lt;&lt; idx.x() + 1, idx.y()     ;
+    s_idx &lt;&lt; idx.x(),     idx.y() + 1 ;
+    w_idx &lt;&lt; idx.x() - 1, idx.y()     ;
+  if (std::isnan(this-&gt;gm.at("eroded_occ", n_idx)) ||
+      std::isnan(this-&gt;gm.at("eroded_occ", e_idx)) ||
+      std::isnan(this-&gt;gm.at("eroded_occ", s_idx)) ||
+      std::isnan(this-&gt;gm.at("eroded_occ", w_idx)) ) {
+    return true;
+  } else {
+    return false;
+  }
+}</code></pre></div>
+
+  <h2 id="s2"><span class="n">2</span>Cluster the frontiers</h2>
+  <p>After detecting every frontier in the grid, find the clusters. A cluster is a group of frontiers in which every cell neighbours at least one other cell in the group.</p>
+  <p>Clusters are stored in a <code>std::vector&lt;std::vector&lt;grid_map::Index&gt;&gt;</code>, a list of cluster sets. Iterate over the frontiers and, from each one, start a <code>std::stack</code> that grows as it finds neighbours that are also frontiers. Mark those frontiers as visited so no stack is built twice. A cluster also has to pass a minimum size, here 75 cells.</p>
+  <div class="code wide" data-name="cluster_detection()"><pre><code>std::vector&lt;std::vector&lt;grid_map::Index&gt;&gt; frontier_finder::cluster_detection() {
+  std::vector&lt;std::vector&lt;grid_map::Index&gt;&gt; output;
+  for (grid_map::Index frontier : this-&gt;frontier_indices) {
+    if(this-&gt;gm.at("visited_cells",frontier) == 0) {
+
+      std::stack&lt;grid_map::Index&gt; stack;
+      stack.push(frontier);
+      std::vector&lt;grid_map::Index&gt; cluster;
+      cluster.push_back(frontier);
+      while(!stack.empty()) {
+        grid_map::Index top_iter = stack.top();
+        stack.pop();
+        this-&gt;gm.at("visited_cells", top_iter) = 1;
+        std::vector&lt;grid_map::Index&gt; neighbors = get_neighbors(top_iter);
+        for (size_t i = 0; i &lt; neighbors.size(); i++) {
+          auto iter = std::find_if(this-&gt;frontier_indices.begin(), this-&gt;frontier_indices.end(),
+                                   [&amp;](const grid_map::Index&amp; n) {
+                                     return (n == neighbors[i]).all();
+                                   });
+          if (iter != this-&gt;frontier_indices.end()) {
+            if(this-&gt;gm.at("visited_cells", neighbors[i]) == 0) {
+              stack.push(neighbors[i]);
+            }
+            cluster.push_back(neighbors[i]);
+          }
+        }
+      }
+      if(cluster.size() &gt;  75) {
+        output.push_back(cluster);
+      }
+    }
+  }
+  return output;
+}</code></pre></div>
+
+  <h2 id="s3"><span class="n">3</span>Find the centroids</h2>
+  <p>This is probably the easiest part: add up each cluster's x and y values and divide by the number of cells.</p>
+  <div class="code wide" data-name="centroids"><pre><code>for (std::vector&lt;grid_map::Index&gt; cluster : clusters) {
+  grid_map::Index centroid;
+  centroid.x() = 0;
+  centroid.y() = 0;
+
+  for (grid_map::Index frontier : cluster) {
+    centroid.x() += frontier.x();
+    centroid.y() += frontier.y();
+  }
+
+  centroid.x() = centroid.x()/cluster.size();
+  centroid.y() = centroid.y()/cluster.size();
+}</code></pre></div>
+
+  <h2 id="s4"><span class="n">4</span>A* to each centroid</h2>
+  <p>Finally, work out which frontier centroid is closest to the robot's current position. Run A* to each centroid and keep the one with the shortest path. A* is well documented elsewhere and isn't rewritten here. The video below shows the result of all of this work.</p>
+  <div class="video wide"><div class="frame yt" data-id="WtHPOUjRNWU" data-title="Scarab exploration"></div>
+    <figcaption class="mono" style="margin-top:.5rem"><span>Scarab exploration, GRASP Lab</span><a href="https://www.youtube.com/watch?v=WtHPOUjRNWU" target="_blank" rel="noopener">open on YouTube ↗</a></figcaption></div>
+
+  <div class="next mono"><a href="../index.html#r-notebook">← All notebook entries</a><a href="optimal-control-1-value-iteration.html">Next: An Exploration into Optimal Control →</a></div>
+</main>
+<script src="note.js"></script>
+</body>
+</html>
